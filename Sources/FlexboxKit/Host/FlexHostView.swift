@@ -91,10 +91,32 @@ public final class FlexHostView: UIView {
     /// The tree currently rendered.
     public var tree: LayoutTree { renderTree.tree }
 
-    /// Replaces the rendered tree. Step 1: a full rebuild. Reconcile-driven
-    /// minimal updates land in the tree-sync step.
+    /// Replaces the rendered tree with the minimal set of view/node mutations
+    /// (`Reconciler` → `FlexOpApplier`), preserving view identity, scroll
+    /// position and any in-flight animation on the views that survive.
+    ///
+    /// Two changes can't be expressed as an in-place diff and fall back to a
+    /// full rebuild: the root `id` changed, or some node changed its content
+    /// *kind* (e.g. `text` → `image`), which needs a different `UIView` class.
     public func update(to newTree: LayoutTree) {
-        rebuildRenderTree(with: newTree)
+        let current = renderTree.tree
+        if newTree.id != current.id || FlexHostView.contentKindDiffers(current, newTree) {
+            rebuildRenderTree(with: newTree)
+        } else {
+            renderTree.update(to: newTree)
+            setNeedsLayout()
+        }
+    }
+
+    /// `true` if any id shared by both trees carries a different `content` kind.
+    static func contentKindDiffers(_ a: LayoutTree, _ b: LayoutTree) -> Bool {
+        if a.content != b.content { return true }
+        var kindByID: [String: ContentType] = [:]
+        for node in b.flexFlattened() { kindByID[node.id] = node.content }
+        for node in a.flexFlattened() {
+            if let newKind = kindByID[node.id], newKind != node.content { return true }
+        }
+        return false
     }
 
     /// Registers a custom / override factory and rebuilds so it takes effect.

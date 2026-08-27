@@ -29,6 +29,10 @@ final class FlexRenderTree {
     private unowned let host: FlexHostView
     let cache: MeasureCache
 
+    /// The host that owns this render tree. Used by `FlexOpApplier` to route
+    /// rejections to the per-host observer.
+    var owningHost: FlexHostView { host }
+
     /// `id → (node, view)`. Strong on `node`, weak on `view` (see `RenderItem`).
     private(set) var itemsByID: [String: RenderItem] = [:]
 
@@ -74,16 +78,44 @@ final class FlexRenderTree {
 
     /// Removes a node and its whole subtree from the index, breaking each
     /// node↔view association. Does not touch the Yoga parent linkage or the view
-    /// hierarchy — the caller does that.
-    func unregisterSubtree(id: String) {
-        guard let item = itemsByID[id] else { return }
+    /// hierarchy — the caller does that. Returns every id that was removed
+    /// (pre-order), so a caller applying a batch of ops can skip ops that target
+    /// a node this teardown already claimed.
+    @discardableResult
+    func unregisterSubtree(id: String) -> [String] {
+        guard let item = itemsByID[id] else { return [] }
         NodeViewAssociation.unlink(view: item.view, node: item.node)
+        var removed = [id]
         for child in item.node.children {
             if let childID = idForNode(child) {
-                unregisterSubtree(id: childID)
+                removed.append(contentsOf: unregisterSubtree(id: childID))
             }
         }
         itemsByID.removeValue(forKey: id)
+        return removed
+    }
+
+    // MARK: - Incremental update
+
+    /// Reconciles the live trees to `newTree` by applying the minimal
+    /// `[LayoutOp]` from `Reconciler`. The caller guarantees `newTree.id` matches
+    /// the current root id and that no node changed its content *kind*
+    /// (`FlexHostView.update(to:)` routes both of those to a full rebuild).
+    func update(to newTree: LayoutTree) {
+        let ops = Reconciler.reconcile(from: tree, to: newTree)
+        var applier = FlexOpApplier(renderTree: self)
+        applier.apply(ops, newTree: newTree)
+        tree = newTree
+    }
+
+    /// Builds a detached node+view subtree for `subtree` and registers every
+    /// node in the index. The result is not attached to any parent — the caller
+    /// links it into the node tree and the view hierarchy.
+    func buildSubtree(_ subtree: LayoutTree) -> (node: FlexNode, view: UIView) {
+        FlexRenderTree.buildDetached(
+            subtree: subtree, config: config, registry: registry,
+            host: host, cache: cache, into: &itemsByID
+        )
     }
 
     /// Reverse lookup `FlexNode → id` by identity. Linear; used only during

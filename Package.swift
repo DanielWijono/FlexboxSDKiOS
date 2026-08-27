@@ -85,6 +85,9 @@ let package = Package(
                 "FlexboxKitTestSupport",
                 "FlexboxCoreTestSupport",
             ],
+            // Reference PNGs are read from disk by absolute path at test time,
+            // not bundled — keep them out of the build graph.
+            exclude: ["__Snapshots__"],
             swiftSettings: [
                 .swiftLanguageMode(.v6),
             ]

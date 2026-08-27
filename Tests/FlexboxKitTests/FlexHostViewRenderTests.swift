@@ -80,17 +80,23 @@ final class FlexHostViewRenderTests: XCTestCase {
         FlexKitPrecondition.assertsAreFatal = false
         defer { FlexKitPrecondition.assertsAreFatal = true }
 
-        let tree = LayoutTree(
-            id: "root", content: .container,
-            children: [LayoutTree(id: "widget", content: .custom("no-such-factory"),
-                                  style: FlexStyle(width: .points(10), height: .points(10)))]
-        )
+        // Start valid, attach the observer, then push an update that inserts a
+        // node whose content type has no registered factory. The reject-and-
+        // continue path runs through the incremental applier's `buildSubtree`.
+        let base = LayoutTree(id: "root", content: .container)
         let observer = RecordingRenderObserver()
-        let host = FlexHostView(tree: tree)
+        let host = FlexHostView(tree: base)
         host.renderObserver = observer
-        host.update(to: tree)   // rebuild now that the observer is attached
         let (window, _) = HostHarness.finishMount(host: host)
         defer { window.resignKey() }
+
+        var withWidget = base
+        withWidget.children = [
+            LayoutTree(id: "widget", content: .custom("no-such-factory"),
+                       style: FlexStyle(width: .points(10), height: .points(10))),
+        ]
+        host.update(to: withWidget)
+        HostHarness.relayout(host)
 
         XCTAssertTrue(observer.rejections.contains { $0.operation == "FlexViewRegistry.resolve" })
         XCTAssertNotNil(host.currentRenderTree.view(id: "widget"), "a placeholder view is still created")
