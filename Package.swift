@@ -65,5 +65,29 @@ let package = Package(
                 .swiftLanguageMode(.v6),
             ]
         ),
+        .target(
+            name: "FlexboxKitTestSupport",
+            dependencies: [
+                "FlexboxKit",
+                "FlexboxCore",
+                "FlexboxCoreTestSupport",
+            ],
+            path: "Tests/FlexboxKitTestSupport",
+            swiftSettings: [
+                .swiftLanguageMode(.v6),
+            ]
+        ),
+        .testTarget(
+            name: "FlexboxKitTests",
+            dependencies: [
+                "FlexboxKit",
+                "FlexboxCore",
+                "FlexboxKitTestSupport",
+                "FlexboxCoreTestSupport",
+            ],
+            swiftSettings: [
+                .swiftLanguageMode(.v6),
+            ]
+        ),
     ]
 )
