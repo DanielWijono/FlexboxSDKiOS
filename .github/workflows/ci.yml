@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build + test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
+      - run: swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        run: swift test
+
+  sanitizers:
+    name: address sanitizer
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
+      - name: Test under ASan (blocks merge)
+        run: swift test --sanitize=address
+
+  release-paths:
+    name: release-mode production paths
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
+      - name: Test in release configuration
+        run: swift test -c release -Xswiftc -enable-testing
+
+  forbidden-symbols:
+    name: forbidden symbols
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No YGNodeFreeRecursive / passRetained
+        run: |
+          if grep -rn --include='*.swift' -E 'YGNodeFreeRecursive|passRetained' Sources/ \
+               | grep -vE '//|forbidden'; then
+            echo "::error::forbidden Yoga memory call found"; exit 1
+          fi
+      - name: FlexboxCore stays headless (no UIKit)
+        run: |
+          if grep -rn --include='*.swift' 'import UIKit' Sources/FlexboxCore/; then
+            echo "::error::FlexboxCore must not import UIKit"; exit 1
+          fi
+      - name: YG* symbols confined to YogaInterop.swift
+        run: |
+          if grep -rn --include='*.swift' -E 'import CYoga' Sources/ \
+               | grep -v 'Engine/YogaInterop.swift'; then
+            echo "::error::import CYoga outside YogaInterop.swift"; exit 1
+          fi
+
+  dco:
+    name: DCO sign-off
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Every commit is Signed-off-by
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          missing=0
+          for sha in $(git rev-list "$base..$head"); do
+            if ! git show -s --format=%B "$sha" | grep -qiE '^Signed-off-by: .+ <.+@.+>'; then
+              echo "::error::commit $sha is missing a Signed-off-by line"
+              missing=1
+            fi
+          done
+          exit $missing
+
+  # TODO(Artefact 3/4): once a host app exists, add an Instruments Allocations
+  # job that pushes/pops 100 screens and asserts no abandoned memory
+  # (spec §"Gerbang kebocoran").
