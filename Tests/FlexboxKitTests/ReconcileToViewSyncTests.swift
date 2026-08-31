@@ -232,6 +232,55 @@ final class ReconcileToViewSyncTests: XCTestCase {
         XCTAssertFalse(observer.didReject, "unexpected: \(observer.rejections)")
     }
 
+    // MARK: Content invalidation (step 4)
+
+    func testTextChangeDirtiesTheLeafButColorChangeDoesNot() throws {
+        let observer = RecordingRenderObserver()
+        let tree = LayoutTree(
+            id: "list", content: .container,
+            style: FlexStyle(flexDirection: .column, gap: .points(4)),
+            children: [
+                LayoutTree(id: "label", content: .text,
+                           props: ["text": .string("short"),
+                                   "textColor": .string("#000000")]),
+            ]
+        )
+        let (window, host) = mount(tree, observer)
+        defer { window.resignKey() }
+
+        let labelNode = try XCTUnwrap(host.currentRenderTree.node(id: "label"))
+        XCTAssertFalse(labelNode.isDirty, "clean after the initial pass")
+        let heightBefore = try XCTUnwrap(host.currentRenderTree.view(id: "label")).bounds.height
+
+        // 1. size-affecting change → leaf marked content-dirty, height grows
+        var withLongText = tree
+        withLongText.children[0].props = [
+            "text": .string("line one\nline two\nline three\nline four"),
+            "textColor": .string("#000000"),
+        ]
+        host.update(to: withLongText)
+        XCTAssertTrue(labelNode.isDirty, "text change should mark the leaf content-dirty")
+        HostHarness.relayout(host)
+        XCTAssertGreaterThan(
+            try XCTUnwrap(host.currentRenderTree.view(id: "label")).bounds.height, heightBefore
+        )
+        XCTAssertFalse(labelNode.isDirty, "clean again after relayout")
+
+        // 2. colour-only change → view refreshes, layout is NOT dirtied
+        let colorBefore = (host.currentRenderTree.view(id: "label") as? UILabel)?.textColor
+        var withNewColor = withLongText
+        withNewColor.children[0].props = [
+            "text": .string("line one\nline two\nline three\nline four"),
+            "textColor": .string("#ff0000"),
+        ]
+        host.update(to: withNewColor)
+        XCTAssertFalse(labelNode.isDirty, "colour-only change must not dirty layout")
+        HostHarness.relayout(host)
+        let colorAfter = (host.currentRenderTree.view(id: "label") as? UILabel)?.textColor
+        XCTAssertNotEqual(colorBefore, colorAfter, "the view should still refresh on a colour change")
+        XCTAssertFalse(observer.didReject, "unexpected: \(observer.rejections)")
+    }
+
     // MARK: Convergence
 
     func testIncrementalUpdateRendersIdenticallyToAFreshBuild() {

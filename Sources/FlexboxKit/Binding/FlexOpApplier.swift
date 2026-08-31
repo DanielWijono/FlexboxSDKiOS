@@ -44,6 +44,9 @@ struct FlexOpApplier {
 
     mutating func apply(_ ops: [LayoutOp], newTree: LayoutTree) {
         let newByID = FlexOpApplier.index(of: newTree)
+        // `renderTree.tree` is still the pre-update tree while ops apply — index
+        // it so `updateContent` can compare old vs new props.
+        let oldByID = FlexOpApplier.index(of: renderTree.tree)
 
         for op in ops {
             if settled.contains(op.id) { continue }
@@ -62,7 +65,7 @@ struct FlexOpApplier {
                 updateStyle(id: id, delta: delta, newSubtree: newByID[id])
 
             case .updateContent(let id):
-                updateContent(id: id, newSubtree: newByID[id])
+                updateContent(id: id, oldSubtree: oldByID[id], newSubtree: newByID[id])
 
             case .replaceRoot:
                 // `Reconciler` only emits this when the root id changed, which
@@ -171,7 +174,11 @@ struct FlexOpApplier {
         }
     }
 
-    private mutating func updateContent(id: String, newSubtree: LayoutTree?) {
+    private mutating func updateContent(
+        id: String,
+        oldSubtree: LayoutTree?,
+        newSubtree: LayoutTree?
+    ) {
         guard let item = renderTree.item(id: id), let view = item.view else {
             flexKitRequire(
                 false, operation: "FlexOpApplier.updateContent",
@@ -193,7 +200,12 @@ struct FlexOpApplier {
             .resolveFactory(for: item.content, in: renderTree.registry, host: host)
             .update(view, for: newSubtree)
 
-        if item.isMeasuredLeaf {
+        // Re-measure only when a size-affecting `props` key actually moved — a
+        // colour-only change refreshes the view above but must not dirty layout.
+        if item.isMeasuredLeaf,
+           ContentInvalidation.requiresRemeasure(
+               content: item.content, old: oldSubtree?.props, new: newSubtree.props
+           ) {
             item.node.markContentDirty()
         }
     }

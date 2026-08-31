@@ -90,5 +90,62 @@ final class FlexHostViewSnapshotTests: XCTestCase {
                             named: "demo-screen-160w",
                             size: CGSize(width: 160, height: 320))
     }
+
+    // MARK: Step 4 — content invalidation, visualised
+
+    /// Three states of one host driven by `update(to:)`:
+    ///   0 — initial
+    ///   1 — `detail` text replaced with a long string → the leaf re-measures,
+    ///       the column reflows taller
+    ///   2 — only `detail`'s `textColor` changed → identical layout, new colour
+    ///       (no `markContentDirty`, no re-measure)
+    private var note: LayoutTree {
+        LayoutTree(
+            id: "note", content: .container,
+            style: FlexStyle(flexDirection: .column, padding: Edges(.points(16)), gap: .points(8)),
+            children: [
+                LayoutTree(id: "title", content: .text,
+                           props: ["text": .string("Status"), "numberOfLines": .number(1)]),
+                LayoutTree(id: "detail", content: .text,
+                           props: ["text": .string("All systems normal."),
+                                   "textColor": .string("#1A7F37")]),
+            ]
+        )
+    }
+
+    private func detail(text: String, color: String) -> LayoutTree {
+        var t = note
+        t.children[1].props = ["text": .string(text), "textColor": .string(color)]
+        return t
+    }
+
+    func testContentInvalidationInitial() {
+        FlexSnapshot.verify(host(note),
+                            named: "content-update-0-initial",
+                            size: CGSize(width: 260, height: 150))
+    }
+
+    func testContentInvalidationTextGrew() {
+        let h = host(note)
+        h.update(to: detail(
+            text: "Degraded performance in us-east-1. Investigating elevated error rates on checkout.",
+            color: "#1A7F37"))
+        FlexSnapshot.verify(h,
+                            named: "content-update-1-text-grew",
+                            size: CGSize(width: 260, height: 150))
+    }
+
+    func testContentInvalidationColorOnly() {
+        let h = host(note)
+        h.update(to: detail(
+            text: "Degraded performance in us-east-1. Investigating elevated error rates on checkout.",
+            color: "#1A7F37"))
+        h.update(to: detail(
+            text: "Degraded performance in us-east-1. Investigating elevated error rates on checkout.",
+            color: "#CF222E"))
+        FlexSnapshot.verify(h,
+                            named: "content-update-2-color-only",
+                            size: CGSize(width: 260, height: 150))
+    }
 }
 #endif
