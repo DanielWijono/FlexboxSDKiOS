@@ -26,5 +26,10 @@ struct RenderItem {
     /// `custom` leaf whose factory measures itself and that has no explicit
     /// width+height in its style).
     var isMeasuredLeaf: Bool
+
+    /// The `display` value the tree's own style declared for this node, if any.
+    /// `flexReconcileHiddenDisplay` restores this when the backing view is
+    /// un-hidden (falling back to `.flex` when the style was silent).
+    var styleDisplay: DisplayValue?
 }
 #endif

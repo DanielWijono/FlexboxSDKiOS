@@ -218,7 +218,7 @@ struct FlexOpApplier {
         var managedSeen = 0
         for (subviewIndex, sub) in parent.subviews.enumerated() {
             if managedSeen == childOrdinal { return subviewIndex }
-            if sub.flexNode != nil { managedSeen += 1 }
+            if sub.flexNode != nil && sub.isIncludedInLayout { managedSeen += 1 }
         }
         return parent.subviews.count
     }

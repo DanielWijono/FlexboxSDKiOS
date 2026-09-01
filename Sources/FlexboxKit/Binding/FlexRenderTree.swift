@@ -63,6 +63,13 @@ final class FlexRenderTree {
     func view(id: String) -> UIView? { itemsByID[id]?.view }
     func item(id: String) -> RenderItem? { itemsByID[id] }
 
+    /// Every registered item, unordered.
+    var allItems: [RenderItem] { Array(itemsByID.values) }
+
+    /// Every registered item that carries a measure function — the leaves a
+    /// Dynamic Type change must re-measure.
+    var measuredLeaves: [RenderItem] { itemsByID.values.filter(\.isMeasuredLeaf) }
+
     // MARK: - Registry / index maintenance (used by FlexOpApplier)
 
     func setRegistry(_ registry: FlexViewRegistry) { self.registry = registry }
@@ -173,7 +180,8 @@ final class FlexRenderTree {
 
         index[subtree.id] = RenderItem(
             id: subtree.id, node: node, view: view,
-            content: subtree.content, isMeasuredLeaf: isMeasuredLeaf
+            content: subtree.content, isMeasuredLeaf: isMeasuredLeaf,
+            styleDisplay: subtree.style.display
         )
         return (node, view)
     }

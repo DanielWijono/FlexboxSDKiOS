@@ -24,7 +24,8 @@ public final class FlexHostView: UIView {
     private var config: FlexConfig
     private var registry: FlexViewRegistry
     private let cache = MeasureCache()
-    private let reentrancy = MeasureReentrancyGuard()
+    /// Not `private`: `FlexHostView+SelfSizing` enters/leaves it too.
+    let reentrancy = MeasureReentrancyGuard()
     private var renderTree: FlexRenderTree!
 
     /// Yoga errata level for this tree. Fixed at construction — make a new host
@@ -106,6 +107,9 @@ public final class FlexHostView: UIView {
             renderTree.update(to: newTree)
             setNeedsLayout()
         }
+        // A new tree usually means a new self-sized extent — let a surrounding
+        // Auto Layout pass re-query `intrinsicContentSize`.
+        invalidateIntrinsicContentSize()
     }
 
     /// `true` if any id shared by both trees carries a different `content` kind.
@@ -130,8 +134,11 @@ public final class FlexHostView: UIView {
 
     public override func layoutSubviews() {
         super.layoutSubviews()
-        guard reentrancy.enter() else { return }
+        // `enter()` always bumps the depth counter — pair it with `leave()`
+        // unconditionally, then bail if a pass is already running.
+        let outermost = reentrancy.enter()
         defer { reentrancy.leave() }
+        guard outermost else { return }
         runPass(availableWidth: bounds.width, availableHeight: bounds.height, applyGeometry: true)
     }
 
@@ -154,6 +161,10 @@ public final class FlexHostView: UIView {
         let start = DispatchTime.now().uptimeNanoseconds
         cache.beginPass()
 
+        // Fold in view-driven state that carries no tree update: a subview's
+        // `isHidden` → `display: none` (siblings reflow).
+        flexReconcileHiddenDisplay(in: renderTree)
+
         let direction = flexWritingDirection(for: self)
         renderTree.root.calculate(
             availableWidth: Double(availableWidth),
@@ -169,10 +180,14 @@ public final class FlexHostView: UIView {
         let rootLayout = renderTree.root.layout
         let measured = CGSize(width: rootLayout.width, height: rootLayout.height)
 
-        let elapsed = DispatchTime.now().uptimeNanoseconds - start
-        let nodeCount = renderTree.root.nodeCount
-        renderObserver?.flexHostDidLayout(nodeCount: nodeCount, durationNanos: elapsed)
-        FlexboxCoreBridge.reportCalculated(nodeCount: nodeCount, durationNanos: elapsed)
+        // A measure-only pass (the self-size hooks) has laid nothing out — only a
+        // geometry-applying pass counts as a host layout for the observer.
+        if applyGeometry {
+            let elapsed = DispatchTime.now().uptimeNanoseconds - start
+            let nodeCount = renderTree.root.nodeCount
+            renderObserver?.flexHostDidLayout(nodeCount: nodeCount, durationNanos: elapsed)
+            FlexboxCoreBridge.reportCalculated(nodeCount: nodeCount, durationNanos: elapsed)
+        }
         return measured
     }
 

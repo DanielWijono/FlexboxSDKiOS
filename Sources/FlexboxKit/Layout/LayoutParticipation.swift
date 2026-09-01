@@ -14,8 +14,9 @@
 //    • the pass direction comes from `effectiveUserInterfaceLayoutDirection`
 //      (RTL support), forwarded to `FlexNode.calculate(direction:)`.
 //
-//  Full participation/hidden observation lands with the trait-handling step;
-//  this file is the storage + the pure helpers.
+//  `isIncludedInLayout` storage plus the pass-time helpers the host calls:
+//  `flexReconcileHiddenDisplay` (isHidden → display) and `flexWritingDirection`
+//  (RTL). See `FlexHostView+Traits` for the trait-change reactions.
 //
 
 #if canImport(UIKit)
@@ -52,6 +53,23 @@ func flexWritingDirection(for view: UIView) -> FlexWritingDirection {
     switch view.effectiveUserInterfaceLayoutDirection {
     case .rightToLeft: return .rtl
     default: return .ltr
+    }
+}
+
+/// Reconciles each managed node's `display` to its backing view's `isHidden`:
+/// a hidden view collapses to `display: none` (siblings reflow), an un-hidden
+/// one is restored to the `display` its tree style declared (`.flex` when the
+/// style was silent).
+///
+/// Idempotent — Yoga only marks itself dirty on an actual change — so the host
+/// runs this at the top of every pass, catching an `isHidden` toggle that came
+/// with no tree update.
+@MainActor
+func flexReconcileHiddenDisplay(in renderTree: FlexRenderTree) {
+    for item in renderTree.allItems {
+        guard let view = item.view else { continue }
+        let target: DisplayValue = view.isHidden ? DisplayValue.none : (item.styleDisplay ?? .flex)
+        item.node.apply(FlexStyle(display: target))
     }
 }
 #endif
