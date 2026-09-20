@@ -35,8 +35,9 @@ public final class FlexHostView: UIView {
     /// Per-host diagnostics sink. See `FlexRenderObserver`.
     public weak var renderObserver: FlexRenderObserver?
 
-    /// How the device safe area is folded into the root node's padding. Default
-    /// `.ignore` (explicit opt-in).
+    /// Whether — and on which edges — the device safe area insets the root
+    /// node's children. Default `.ignore` (explicit opt-in). See
+    /// `FlexHostView+SafeArea`.
     public var safeAreaMode: FlexSafeAreaMode = .ignore {
         didSet { if safeAreaMode != oldValue { setNeedsLayout() } }
     }
@@ -54,6 +55,12 @@ public final class FlexHostView: UIView {
     /// Size produced by the most recent self-size pass — returned while a pass
     /// is re-entered (see `MeasureReentrancyGuard`).
     var lastSelfSizedResult: CGSize = .zero
+
+    /// Whether the last pass wrote safe-area insets onto the root node's border.
+    /// Lets `flexApplySafeAreaToRoot` leave the root untouched while the mode is
+    /// `.ignore`, yet still restore the payload's own border on the one pass
+    /// after the insets go away.
+    var hasWrittenSafeAreaBorder = false
 
     // MARK: Init
 
@@ -168,10 +175,13 @@ public final class FlexHostView: UIView {
         cache.beginPass()
 
         // Fold in view-driven state that carries no tree update: a subview's
-        // `isHidden` → `display: none` (siblings reflow).
+        // `isHidden` → `display: none` (siblings reflow), and the device safe
+        // area when the host opted into `.padRoot`.
         flexReconcileHiddenDisplay(in: renderTree)
 
         let direction = flexWritingDirection(for: self)
+        flexApplySafeAreaToRoot(direction: direction)
+
         renderTree.root.calculate(
             availableWidth: Double(availableWidth),
             availableHeight: Double(availableHeight),
@@ -226,6 +236,9 @@ public final class FlexHostView: UIView {
             tree: tree, config: config, registry: registry, host: self, cache: cache
         )
         addSubview(renderTree.rootView)
+        // The fresh root carries the payload's own border; the next pass decides
+        // again whether to stack the safe area on top of it.
+        hasWrittenSafeAreaBorder = false
         setNeedsLayout()
     }
 

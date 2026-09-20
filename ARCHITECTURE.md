@@ -145,6 +145,32 @@ Guarded paths (keep in sync with `YogaAssertCatalog.all`):
 | `YGNodeRemoveChild` | node is a current child |
 | `YGNodeCalculateLayout` | depth ≤ maxDepth, node count ≤ maxNodes, dimensions finite (enforced by `LayoutValidation`) |
 
+## Safe area (renderer)
+
+`FlexHostView.safeAreaMode` is **explicit opt-in** and defaults to `.ignore`: a
+payload cannot see the device it renders on, so a host never insets
+server-authored content unless the app asks it to. `.padRoot(edges)` folds
+`safeAreaInsets` into the root node on the named edges, every pass.
+
+The insets are written as the root's **border**, not its padding. Yoga insets a
+content box by `border + padding` and keeps the two independent, so border is
+how "stack the safe area on top of whatever the payload already set" is
+expressed — including when the payload's root padding is a percentage, which no
+points-based merge of the two could represent. Consequences:
+
+- The root *view* still fills the host's `bounds`; a root background colour runs
+  under the status bar and home indicator. Only children move in.
+- The root's border is host-owned while opted in. The written value is
+  recomputed from the payload each pass (`payload border + insets`), never
+  accumulated, so insets can shrink back to zero and repeated passes do not
+  drift.
+- `SafeAreaResolution.resolve` mirrors Yoga's own edge precedence — `start`/`end`
+  > physical > `horizontal`/`vertical` > `all` — and writes every key that could
+  win, so no leftover payload key outranks the resolved value.
+
+The same fold happens on the self-size path, so `sizeThatFits` and a rendered
+pass agree.
+
 ## Leak gates (CI, permanent)
 
 - `LiveNodeCounter` (DEBUG) returns to baseline on every test teardown.

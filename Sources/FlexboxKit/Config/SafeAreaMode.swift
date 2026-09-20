@@ -9,6 +9,10 @@
 //  sends the layout cannot see the safe area, so silently adding insets on top
 //  of server-provided root padding is surprising. Default is `.ignore`.
 //
+//  `FlexHostView+SafeArea` applies the mode once per pass; `SafeAreaResolution`
+//  is the pure resolution it uses, and documents why the insets are written as
+//  the root's border.
+//
 
 /// A subset of a box's edges.
 public struct FlexEdgeSet: OptionSet, Sendable, Hashable {
@@ -26,12 +30,15 @@ public struct FlexEdgeSet: OptionSet, Sendable, Hashable {
 }
 
 /// Whether — and on which edges — a `FlexHostView` folds `safeAreaInsets` into
-/// the root node's padding on every layout pass.
+/// the root node's box on every layout pass.
 public enum FlexSafeAreaMode: Sendable, Equatable {
     /// Do nothing with the safe area. The default.
     case ignore
-    /// Add `safeAreaInsets` for the named edges to the root node's padding,
-    /// stacked on top of any padding the payload set on the root.
+    /// Inset the root node's children by `safeAreaInsets` on the named edges,
+    /// stacked on top of any padding or border the payload set on the root.
+    ///
+    /// The root view itself still fills the host, so a root background keeps
+    /// running edge to edge; only its children move in.
     case padRoot(FlexEdgeSet)
 }
 

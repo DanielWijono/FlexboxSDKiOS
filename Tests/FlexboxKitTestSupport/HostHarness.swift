@@ -39,6 +39,36 @@ public enum HostHarness {
         return (window, host)
     }
 
+    /// A window-hosted `FlexHostView` whose safe area the test controls.
+    ///
+    /// The insets come from a real `UIViewController.additionalSafeAreaInsets`
+    /// rather than a stub, so the host sees the same propagation path it sees in
+    /// an app. The device's own insets are added to these by UIKit, so assert
+    /// against `host.safeAreaInsets` rather than against the value passed here.
+    public static func mountInViewController(
+        _ tree: LayoutTree,
+        additionalSafeAreaInsets: UIEdgeInsets,
+        registry: FlexViewRegistry = .default,
+        size: CGSize = CGSize(width: 320, height: 568)
+    ) -> (window: UIWindow, controller: UIViewController, host: FlexHostView) {
+        let host = FlexHostView(tree: tree, registry: registry)
+        let controller = UIViewController()
+        controller.additionalSafeAreaInsets = additionalSafeAreaInsets
+
+        let window = UIWindow(frame: CGRect(origin: .zero, size: size))
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+
+        host.frame = controller.view.bounds
+        host.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        controller.view.addSubview(host)
+
+        window.layoutIfNeeded()
+        host.setNeedsLayout()
+        host.layoutIfNeeded()
+        return (window, controller, host)
+    }
+
     /// Forces another synchronous layout pass.
     public static func relayout(_ host: FlexHostView) {
         host.setNeedsLayout()
