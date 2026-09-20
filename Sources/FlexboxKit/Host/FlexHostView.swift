@@ -182,6 +182,16 @@ public final class FlexHostView: UIView {
         let direction = flexWritingDirection(for: self)
         flexApplySafeAreaToRoot(direction: direction)
 
+        #if DEBUG
+        // Tree-sync gate, before the result is trusted: the node tree and the
+        // view tree must still agree in count and order. Only on a
+        // geometry-applying pass — a measure-only pass sees the same trees and
+        // would just double-report.
+        if applyGeometry {
+            LayoutSyncInvariant.check(renderTree, observer: renderObserver)
+        }
+        #endif
+
         renderTree.root.calculate(
             availableWidth: Double(availableWidth),
             availableHeight: Double(availableHeight),

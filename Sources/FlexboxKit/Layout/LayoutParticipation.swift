@@ -8,7 +8,8 @@
 //    • `isIncludedInLayout` (default `true`) — set `false` on a subview the
 //      renderer should leave completely alone: no `FlexNode` is created for it,
 //      its frame is untouched, and it is excluded from the DEBUG
-//      "node child count == participating subview count" invariant.
+//      "node child count == participating subview count" invariant
+//      (`LayoutSyncInvariant`, run once per geometry pass).
 //    • `isHidden == true` maps to an effective `display: none` on that node, so
 //      siblings reflow (spec Artefak 3 §"Dikembalikan karena produksi").
 //    • the pass direction comes from `effectiveUserInterfaceLayoutDirection`

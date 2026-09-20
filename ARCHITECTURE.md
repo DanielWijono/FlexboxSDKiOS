@@ -173,11 +173,50 @@ pass agree.
 
 ## Leak gates (CI, permanent)
 
+Engine (`FlexboxCore`, runs under `swift test` on macOS):
+
 - `LiveNodeCounter` (DEBUG) returns to baseline on every test teardown.
 - `weak` references to nodes are `nil` after scope exit.
 - `children.count == YGNodeGetChildCount` after every mutation / pass (DEBUG).
 - `grep` gate: no `YGNodeFreeRecursive`, no `passRetained`, no `import UIKit` in
   `FlexboxCore`.
 - `swift test --sanitize=address` blocks merge.
-- Pending (needs a host app, Artefact 3/4): a 100× push/pop screen cycle under
-  Instruments Allocations.
+
+Renderer (`FlexboxKit`, `RendererLeakTests` — needs a simulator, so run it with
+`xcodebuild test -scheme Flexbox-Package -destination 'platform=iOS Simulator,…'`;
+`canImport(UIKit)` is false on macOS and `swift test` compiles none of it):
+
+- A mounted tree deallocates completely once the host goes away: host, every
+  managed view, and every node.
+- A node that outlives its host does not retain it — the engine reaches the host
+  only through `WeakHostRelay`, and `MeasureContext` holds its view weakly.
+- A reconcile removal is total: the removed subtree's views **and** nodes go, and
+  the removed ids leave the render index. Dropping the node side is the Artefact 1
+  leak mode.
+- A full rebuild releases the previous tree instead of stacking one.
+- Repeated mount/teardown cycles do not accumulate.
+
+## Tree-sync invariant (DEBUG)
+
+`LayoutSyncInvariant` runs once per geometry pass (never on a measure-only
+self-size pass) and checks, at every managed container: the Yoga child count
+equals the number of subviews carrying a node, the n-th such subview carries
+`node.children[n]`, and no node-less subview takes part in layout. Violations go
+through `flexKitRequire` — trap in DEBUG, compiled out of release entirely.
+
+It exists because the two trees can drift from *outside* the renderer: an
+`addSubview` / `removeFromSuperview` the app performs on a managed container is
+something the renderer never hears about. A stray subview would get no node and
+so never be positioned; a managed view whose node was left behind is the leak
+mode above.
+
+Carrying a node — not `isIncludedInLayout` — is what makes a subview the
+renderer's. On a view the app added, `isIncludedInLayout = false` is the
+documented escape hatch and no node exists. On a view the renderer built from
+the payload, that flag only suppresses geometry: the node keeps its place in the
+flow, so the view still counts. Two carve-outs: a leaf's view internals belong
+to its factory, and a `UIScrollView`'s own indicator subviews cannot be marked
+out of layout.
+
+Pending (needs a host app, Artefact 3/4): a 100× push/pop screen cycle under
+Instruments Allocations.

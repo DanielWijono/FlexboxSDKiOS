@@ -69,6 +69,24 @@ public enum HostHarness {
         return (window, controller, host)
     }
 
+    /// A laid-out `FlexHostView` that was never put in a window.
+    ///
+    /// `layoutIfNeeded` drives `layoutSubviews` off-window just as well, and the
+    /// leak gates need this: a `UIWindow` that has been made key is registered
+    /// process-wide, so it — and everything under it — can outlive the test
+    /// scope for reasons that have nothing to do with the renderer's ownership.
+    public static func layOutOffWindow(
+        _ tree: LayoutTree,
+        registry: FlexViewRegistry = .default,
+        size: CGSize = CGSize(width: 320, height: 568)
+    ) -> FlexHostView {
+        let host = FlexHostView(tree: tree, registry: registry)
+        host.frame = CGRect(origin: .zero, size: size)
+        host.setNeedsLayout()
+        host.layoutIfNeeded()
+        return host
+    }
+
     /// Forces another synchronous layout pass.
     public static func relayout(_ host: FlexHostView) {
         host.setNeedsLayout()
@@ -89,13 +107,18 @@ public enum HostHarness {
     }
 
     /// `true` iff, at every managed node, the Yoga child count equals the
-    /// participating-subview count (spec §"Gerbang kebocoran" DEBUG invariant,
-    /// checked here from the view side too).
+    /// number of subviews carrying a node (spec §"Gerbang kebocoran" DEBUG
+    /// invariant, checked here from the view side too).
+    ///
+    /// Same predicate as the production gate, `LayoutSyncInvariant`: carrying a
+    /// node is what makes a subview the renderer's, not `isIncludedInLayout` —
+    /// which, on a payload-built view, suppresses geometry without removing the
+    /// node.
     public static func childCountInvariantHolds(from view: UIView) -> Bool {
-        for sub in view.subviews where sub.isIncludedInLayout && sub.flexNode != nil {
-            guard let node = sub.flexNode else { return false }
-            let participating = sub.subviews.filter { $0.isIncludedInLayout && $0.flexNode != nil }.count
-            if participating != node.childCount { return false }
+        for sub in view.subviews {
+            guard let node = sub.flexNode else { continue }
+            let managed = sub.subviews.filter { $0.flexNode != nil }.count
+            if managed != node.childCount { return false }
             if !childCountInvariantHolds(from: sub) { return false }
         }
         return true
