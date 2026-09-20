@@ -42,8 +42,14 @@ public final class FlexHostView: UIView {
     }
 
     /// Whether `overflow: scroll` nodes are backed by a `UIScrollView`. Default
-    /// `.automatic`.
-    public var scrollBehavior: FlexScrollBehavior = .automatic
+    /// `.automatic`. Whether a given node is backed by a scroll view is decided
+    /// when its view is built, so changing this rebinds the current tree.
+    public var scrollBehavior: FlexScrollBehavior = .automatic {
+        didSet {
+            guard scrollBehavior != oldValue, renderTree != nil else { return }
+            rebuildRenderTree(with: renderTree.tree)
+        }
+    }
 
     /// Size produced by the most recent self-size pass — returned while a pass
     /// is re-entered (see `MeasureReentrancyGuard`).
@@ -196,6 +202,13 @@ public final class FlexHostView: UIView {
             guard let node = sub.flexNode else { continue }
             GeometryApplier.apply(node.layout, to: sub)
             applyGeometryToManagedSubviews(of: sub)
+            if let scroll = sub as? FlexScrollBackingView {
+                // Post-pass: the scroll view's own box is `node`'s flex size
+                // (applied above); its scrollable content is the extent of its
+                // children. `contentOffset` is untouched — GeometryApplier
+                // preserved `bounds.origin`.
+                scroll.contentSize = ScrollContentSizing.contentSize(for: node)
+            }
         }
     }
 

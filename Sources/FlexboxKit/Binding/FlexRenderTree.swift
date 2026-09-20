@@ -150,7 +150,7 @@ final class FlexRenderTree {
         node.apply(subtree.style)
 
         let resolved = resolveFactory(for: subtree.content, in: registry, host: host)
-        let view = resolved.makeView(for: subtree)
+        let view = makeBackingView(for: subtree, factory: resolved, host: host)
         view.translatesAutoresizingMaskIntoConstraints = true
         NodeViewAssociation.link(view: view, node: node, host: host)
 
@@ -184,6 +184,23 @@ final class FlexRenderTree {
             styleDisplay: subtree.style.display
         )
         return (node, view)
+    }
+
+    /// The view for `subtree`. Normally the registered factory's, but a
+    /// `container` with `overflow: scroll` is backed by a `FlexScrollBackingView`
+    /// when the host opts in (`scrollBehavior == .automatic`, the default). With
+    /// `.disabled` it falls through to the plain — still clipping — container.
+    private static func makeBackingView(
+        for subtree: LayoutTree,
+        factory: any FlexViewFactory,
+        host: FlexHostView
+    ) -> UIView {
+        if subtree.content == .container,
+           subtree.style.overflow == .scroll,
+           host.scrollBehavior == .automatic {
+            return FlexScrollBackingView()
+        }
+        return factory.makeView(for: subtree)
     }
 
     /// The factory for `content`, or a plain container factory if the content
