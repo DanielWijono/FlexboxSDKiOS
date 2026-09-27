@@ -201,6 +201,11 @@ public final class FlexHostView: UIView {
         if applyGeometry {
             renderTree.rootView.frame = bounds
             applyGeometryToManagedSubviews(of: renderTree.rootView)
+            // The root never goes through the subview walk, so a root
+            // `overflow: scroll` node needs its content size set here.
+            if let scroll = renderTree.rootView as? FlexScrollBackingView {
+                scroll.contentSize = ScrollContentSizing.contentSize(for: renderTree.root)
+            }
         }
 
         let rootLayout = renderTree.root.layout

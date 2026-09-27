@@ -83,6 +83,26 @@ final class ScrollViewTests: XCTestCase {
                        "contentSize is recomputed to the same extent")
     }
 
+    func testScrollNodeAtTheRootGetsAContentSize() {
+        let tree = LayoutTree(
+            id: "scroll", content: .container,
+            style: FlexStyle(overflow: .scroll),
+            children: [
+                LayoutTree(id: "content", content: .container,
+                           style: FlexStyle(height: .points(800))),
+            ]
+        )
+        let (window, host) = HostHarness.mount(tree, size: CGSize(width: 200, height: 300))
+        defer { window.resignKey() }
+
+        guard let scroll = host.currentRenderTree.rootView as? FlexScrollBackingView else {
+            return XCTFail("root overflow: scroll node was not backed by FlexScrollBackingView")
+        }
+        XCTAssertEqual(scroll.bounds.size, CGSize(width: 200, height: 300))
+        XCTAssertEqual(scroll.contentSize, CGSize(width: 200, height: 800),
+                       "a root scroll view scrolls too")
+    }
+
     func testDisabledScrollBehaviorLeavesAPlainClippingContainer() {
         let (window, host) = HostHarness.mount(scrollTree, size: CGSize(width: 200, height: 300))
         defer { window.resignKey() }
