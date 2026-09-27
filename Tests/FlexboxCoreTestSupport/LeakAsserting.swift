@@ -38,8 +38,13 @@ extension XCTestCase {
         line: UInt = #line
     ) {
         #if DEBUG
+        // UIKit may release a test's window (and the nodes it owns) on a later
+        // run-loop turn — observed on iPad. Drain before both samples so the
+        // census counts what is actually retained, not what is merely pending.
+        Self.drainPendingReleases()
         let baseline = LiveNodeCounter.current
         addTeardownBlock {
+            Self.drainPendingReleases(until: { LiveNodeCounter.current <= baseline })
             XCTAssertEqual(
                 LiveNodeCounter.current,
                 baseline,
@@ -49,5 +54,16 @@ extension XCTestCase {
             )
         }
         #endif
+    }
+
+    /// Spins the main run loop in short turns until `done` holds or ~0.5 s pass
+    /// (one turn when `done` is nil). A real leak still fails: the census never
+    /// reaches the baseline. Off the main thread this is a no-op.
+    private static func drainPendingReleases(until done: (() -> Bool)? = nil) {
+        guard Thread.isMainThread else { return }
+        let deadline = Date().addingTimeInterval(0.5)
+        repeat {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+        } while !(done?() ?? true) && Date() < deadline
     }
 }
