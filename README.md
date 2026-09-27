@@ -125,6 +125,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the design.
 
 ## Documentation
 
+- [GUIDE.md](GUIDE.md) — how to build screens: UIKit → Flexbox cheat sheet, stacks, scroll views, text fields, buttons, cells, common mistakes
 - [ARCHITECTURE.md](ARCHITECTURE.md) — ownership contract, teardown order, concurrency model, diagnostics checklist
 - [SCHEMA.md](SCHEMA.md) — the JSON contract a backend sends
 - [CONTRIBUTING.md](CONTRIBUTING.md) — how to run the gates, where contributions are welcome
