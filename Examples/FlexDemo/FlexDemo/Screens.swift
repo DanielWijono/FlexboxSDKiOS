@@ -14,6 +14,11 @@ final class ListViewController: UITableViewController {
         tableView.register(FlexTableViewCell.self, forCellReuseIdentifier: "row")
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 88
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            title: "Form", primaryAction: UIAction { [unowned self] _ in
+                navigationController?.pushViewController(FormViewController(), animated: true)
+            }
+        )
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {

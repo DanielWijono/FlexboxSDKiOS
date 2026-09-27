@@ -12,6 +12,7 @@
 		4A643419E2383899AA83F6E9 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 671AD611C5F9E7C85C8DE760 /* App.swift */; };
 		959DF67AAFC266FBF0EFA41E /* FlexboxKit in Frameworks */ = {isa = PBXBuildFile; productRef = 9A6EF7F4677ACE494E5BBA7B /* FlexboxKit */; };
 		B92F16DF73E53CBA8253CD97 /* Screens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37D800366FE6878494AEE83E /* Screens.swift */; };
+		F4B2F0148563E7EEF772A7B6 /* FormScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0A88CEB64A68C0E0F0C9BA3 /* FormScreen.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +21,7 @@
 		5DA0357C9CC5B817755D7087 /* FlexDemo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FlexDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		671AD611C5F9E7C85C8DE760 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		9FCD662A54F10D0FE49F6A25 /* Layouts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Layouts.swift; sourceTree = "<group>"; };
+		B0A88CEB64A68C0E0F0C9BA3 /* FormScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormScreen.swift; sourceTree = "<group>"; };
 		DB88D0255411E01EB27524BE /* FlexboxSDKiOS */ = {isa = PBXFileReference; lastKnownFileType = folder; name = FlexboxSDKiOS; path = ../..; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -40,6 +42,7 @@
 			isa = PBXGroup;
 			children = (
 				671AD611C5F9E7C85C8DE760 /* App.swift */,
+				B0A88CEB64A68C0E0F0C9BA3 /* FormScreen.swift */,
 				3A6482DD4BC9E56943069C76 /* Info.plist */,
 				9FCD662A54F10D0FE49F6A25 /* Layouts.swift */,
 				37D800366FE6878494AEE83E /* Screens.swift */,
@@ -135,6 +138,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4A643419E2383899AA83F6E9 /* App.swift in Sources */,
+				F4B2F0148563E7EEF772A7B6 /* FormScreen.swift in Sources */,
 				465C1FA02FB5EE6737C71494 /* Layouts.swift in Sources */,
 				B92F16DF73E53CBA8253CD97 /* Screens.swift in Sources */,
 			);
