@@ -20,6 +20,9 @@
 //       and it reports the height its content needs.
 //    4. The host does NOT touch its own `translatesAutoresizingMaskIntoConstraints`
 //       — the app decides whether the host is frame-driven or constraint-driven.
+//    5. In a `UITableView` / `UICollectionView`, use `FlexTableViewCell` /
+//       `FlexCollectionViewCell`. A host pinned into a plain cell is sized before
+//       it ever gets a width and reports the unwrapped height.
 //
 
 #if canImport(UIKit)
