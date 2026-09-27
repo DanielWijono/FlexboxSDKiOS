@@ -22,6 +22,9 @@ struct TextViewFactory: FlexViewFactory {
     func makeView(for tree: LayoutTree) -> UIView {
         let label = UILabel()
         label.numberOfLines = 0
+        // UILabel's default font is a fixed-size system font, which
+        // `adjustsFontForContentSizeCategory` cannot scale. Start from a text style.
+        label.font = UIFont.preferredFont(forTextStyle: .body)
         label.adjustsFontForContentSizeCategory = true
         apply(tree, to: label)
         return label
