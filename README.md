@@ -6,6 +6,11 @@ is the render target. Because the description is an inert value and not a chain 
 calls that mutate views, it can be serialized from a server, diffed so only what
 changed touches C++, and unit-tested without a simulator.
 
+> **New here? Start with the [UIKit developer guide](GUIDE.md).** It shows how to
+> build a screen step by step — parent views, stack views, scroll views, labels,
+> images, text fields and buttons — with a UIKit → Flexbox cheat sheet and a list
+> of common mistakes.
+
 ```swift
 import FlexboxCore
 
@@ -92,6 +97,9 @@ Type, and layouts mirror under right-to-left languages.
 
 [`Examples/FlexDemo`](Examples/FlexDemo) is a small app (a self-sizing list that
 pushes a scrolling detail screen) for trying the renderer on a simulator or device.
+
+For every building block (stacks, scroll views, text fields, buttons, background
+colours…) see the [guide](GUIDE.md).
 
 ## Status
 
