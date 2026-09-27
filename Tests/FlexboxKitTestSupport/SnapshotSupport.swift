@@ -11,6 +11,7 @@
 //    - Reference present: the two images are compared pixel-for-pixel with a
 //      small tolerance; on mismatch a `<name>.failure.png` is written beside the
 //      reference and the test fails.
+//    - On iPad the reference is `__Snapshots__/<name>-ipad.png`.
 //
 //  iOS Simulator only. Rendering uses `CALayer.render(in:)`, which is
 //  deterministic headless (no window server, no run-loop spin needed).
@@ -62,7 +63,10 @@ public enum FlexSnapshot {
         let data = png(host, size: size)
         let dir = directory(for: file)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let reference = dir.appendingPathComponent("\(name).png")
+        // Text anti-aliasing differs by device idiom at the same scale, so iPad
+        // keeps its own references rather than widening the tolerance for all.
+        let idiomName = UIDevice.current.userInterfaceIdiom == .pad ? "\(name)-ipad" : name
+        let reference = dir.appendingPathComponent("\(idiomName).png")
 
         let recording = ProcessInfo.processInfo.environment["FLEX_RECORD_SNAPSHOTS"] == "1"
         guard !recording, let existing = try? Data(contentsOf: reference) else {
@@ -75,7 +79,7 @@ public enum FlexSnapshot {
         }
 
         if let reason = pixelDiff(existing, data) {
-            let failure = dir.appendingPathComponent("\(name).failure.png")
+            let failure = dir.appendingPathComponent("\(idiomName).failure.png")
             try? data.write(to: failure)
             XCTFail(
                 "Snapshot \"\(name)\" changed (\(reason)).\nNew image → \(failure.path)\n"
