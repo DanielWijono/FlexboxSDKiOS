@@ -1,0 +1,36 @@
+name: FlexDemo
+options:
+  deploymentTarget:
+    iOS: "15.0"
+packages:
+  Flexbox:
+    path: ../..
+targets:
+  FlexDemo:
+    type: application
+    platform: iOS
+    sources: [FlexDemo]
+    dependencies:
+      - package: Flexbox
+        product: FlexboxKit
+      - package: Flexbox
+        product: FlexboxCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.flexbox.FlexDemo
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: FlexDemo/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
