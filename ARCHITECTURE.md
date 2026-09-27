@@ -9,7 +9,7 @@ covers Artefact 1 (engine bridge) and Artefact 2 (value layer + reconciliation).
 ```
 CYoga            internal C shim — re-exports <yoga/Yoga.h> as one module
   └─ FlexboxCore   headless. Engine + Model + Schema + Reconcile. No UIKit.
-       └─ FlexboxKit   UIKit renderer. Placeholder in this build (Artefact 3).
+       └─ FlexboxKit   UIKit renderer (Artefact 3). Experimental API.
 ```
 
 `FlexboxCore` must never `import UIKit`. CI greps for it.

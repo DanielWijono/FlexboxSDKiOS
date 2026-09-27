@@ -60,6 +60,39 @@ let resolution = LayoutResolver.resolve(remote: dataFromServer, fallback: bundle
 let binding = FlexLayoutBinding(tree: resolution.tree)
 ```
 
+## Rendering with UIKit
+
+`FlexHostView` is a plain `UIView` that renders a `LayoutTree` as real views
+(`.text` → `UILabel`, `.image` → `UIImageView`, `.container` → `UIView`).
+Updating it diffs the old and new trees and only touches what changed.
+
+```swift
+import FlexboxKit
+
+let host = FlexHostView(tree: card)
+host.safeAreaMode = .padRoot(.all)   // keep content out of the notch / home indicator
+view.addSubview(host)
+
+host.update(to: nextVersionOfCard)   // minimal view mutations, identity preserved
+```
+
+In lists, use the self-sizing cells and let UIKit ask them for their height:
+
+```swift
+tableView.register(FlexTableViewCell.self, forCellReuseIdentifier: "row")
+tableView.rowHeight = UITableView.automaticDimension
+
+let cell = tableView.dequeueReusableCell(withIdentifier: "row", for: indexPath) as! FlexTableViewCell
+cell.host.update(to: rowLayout(for: item))
+```
+
+`FlexCollectionViewCell` does the same for collection views. A container with
+`overflow: scroll` is backed by a `UIScrollView`. Built-in text follows Dynamic
+Type, and layouts mirror under right-to-left languages.
+
+[`Examples/FlexDemo`](Examples/FlexDemo) is a small app (a self-sizing list that
+pushes a scrolling detail screen) for trying the renderer on a simulator or device.
+
 ## Status
 
 **0.x — pre-release.** Breaking changes are expected until 1.0. This build ships:
@@ -67,11 +100,16 @@ let binding = FlexLayoutBinding(tree: resolution.tree)
 | Module | Contents |
 |---|---|
 | `FlexboxCore` | Yoga engine bridge with a strict memory-ownership contract; the `LayoutTree` / `FlexStyle` value model; JSON schema + version negotiation + validation; the reconciliation diff engine. Headless — does not link UIKit. |
-| `FlexboxKit` | Placeholder. The UIKit renderer (measure functions, `layoutSubviews` integration, scroll content sizing, Auto Layout coexistence) is not implemented yet. |
+| `FlexboxKit` | UIKit renderer: `FlexHostView`, text and image measurement, diff-driven view updates, scroll views, safe-area modes, Auto Layout coexistence, `FlexTableViewCell` / `FlexCollectionViewCell`, right-to-left and Dynamic Type. Its public API is marked experimental. |
 
-So today you can build and diff and test layouts as values. Rendering them into
-`UIView`s, and driving a real screen from server JSON end to end, are the next
-milestones — see [ARCHITECTURE.md](ARCHITECTURE.md).
+Known gaps:
+
+- An explicit `font` prop creates a fixed-size font, so that text does not
+  scale with Dynamic Type. Leave `font` unset to get the scaling body style.
+- There is no end-to-end sample that fetches a screen's JSON from a server and
+  renders it; the pieces (`LayoutResolver` + `FlexHostView`) exist separately.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the design.
 
 ## Requirements
 
@@ -82,7 +120,7 @@ milestones — see [ARCHITECTURE.md](ARCHITECTURE.md).
 ## Installation
 
 ```swift
-.package(url: "https://github.com/OWNER/flexbox-sdk-ios.git", "0.1.0" ..< "1.0.0")
+.package(url: "https://github.com/DanielWijono/FlexboxSDKiOS.git", "0.1.0" ..< "1.0.0")
 ```
 
 ## Documentation
