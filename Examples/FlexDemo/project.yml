@@ -34,3 +34,19 @@ targets:
             UIWindowSceneSessionRoleApplication:
               - UISceneConfigurationName: Default
                 UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
+schemes:
+  FlexDemo:
+    build:
+      targets:
+        FlexDemo: all
+    run:
+      config: Debug
+      preActions:
+        # iOS 15 simulator runtimes can fail to update an installed app built by
+        # newer Xcode ("Could not hardlink copy"). Remove the old copy first.
+        - name: Uninstall previous FlexDemo
+          settingsTarget: FlexDemo
+          script: |
+            if [ "$PLATFORM_NAME" = "iphonesimulator" ] && [ -n "$TARGET_DEVICE_IDENTIFIER" ]; then
+              xcrun simctl uninstall "$TARGET_DEVICE_IDENTIFIER" dev.flexbox.FlexDemo >/dev/null 2>&1 || true
+            fi
