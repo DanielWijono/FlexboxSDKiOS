@@ -33,6 +33,35 @@ jobs:
       - name: Test under ASan (blocks merge)
         run: swift test --sanitize=address
 
+  # `swift test` on macOS compiles out every UIKit test, so the renderer
+  # (FlexboxKit) is only exercised here.
+  ios-simulator:
+    name: iOS simulator (${{ matrix.device }}${{ matrix.asan && ', ASan' || '' }})
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        device: ["iPhone 16", "iPad Pro 11-inch (M4)"]
+        asan: [false, true]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
+      - name: Test on ${{ matrix.device }}
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme Flexbox-Package \
+            -destination "platform=iOS Simulator,name=${{ matrix.device }}" \
+            -enableAddressSanitizer ${{ matrix.asan && 'YES' || 'NO' }}
+      - name: Upload snapshot failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-failures-${{ matrix.device }}-asan-${{ matrix.asan }}
+          path: Tests/**/__Snapshots__/*.failure.png
+          if-no-files-found: ignore
+
   release-paths:
     name: release-mode production paths
     runs-on: macos-15

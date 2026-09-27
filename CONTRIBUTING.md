@@ -30,7 +30,18 @@ swift build
 swift test
 swift test --sanitize=address
 swift test -c release          # the production reject-and-continue paths
+
+# Renderer (FlexboxKit) tests need UIKit, so `swift test` on macOS skips them.
+# CI runs these on iPhone and iPad, with and without ASan:
+xcodebuild test -scheme Flexbox-Package \
+  -destination "platform=iOS Simulator,name=iPhone 16"
+xcodebuild test -scheme Flexbox-Package \
+  -destination "platform=iOS Simulator,name=iPad Pro 11-inch (M4)"
 ```
+
+Snapshot references are per device idiom: iPad compares against
+`__Snapshots__/<name>-ipad.png`. Re-record with
+`TEST_RUNNER_FLEX_RECORD_SNAPSHOTS=1` when a rendering change is intentional.
 
 Grep gates (also enforced in CI):
 
